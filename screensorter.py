@@ -6,6 +6,7 @@ import shutil
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import ttk
+import re
 
 CONFIG_FILE_NAME = 'config.json'
 
@@ -44,30 +45,34 @@ def sort():
         messagebox.showerror("Error", "Folder path is not specified in the config file.")
         return
 
+    print(f"Sorting files in folder: {folder_path}")
+
     png_files = glob.glob(os.path.join(folder_path, '*.png'))
+    print(f"PNG files found: {png_files}")
 
     if not png_files:
         messagebox.showinfo("Sort Complete", "No PNG files found in the specified folder.")
         return
 
-    print("PNG files found:")
+    date_pattern = re.compile(r'(\d{4})[-_/](\d{1,2})[-_/](\d{1,2})')
     errors = []
+
     for file in png_files:
-        parts = os.path.basename(file).replace('.png', '').split('-')
-        if len(parts) < 5:
-            errors.append(f"Invalid file name format: {file}")
+        base_name = os.path.basename(file)
+        match = date_pattern.search(base_name)
+        if match:
+            year, month, day = match.groups()
+            year = int(year)
+            month = int(month)
+            day = int(day)
+        else:
+            errors.append(f"Unable to extract date from file name '{base_name}'")
+            print(f"Error: Unable to extract date from file name '{base_name}'")
             continue
 
-        try:
-            year = int(parts[2])
-            month = int(parts[3])
-            day = int(parts[4])
-        except ValueError as e:
-            errors.append(f"Error parsing date from file name '{file}': {e}")
-            continue
-
-        folder_name = f"{year}-{month}-{day}"
+        folder_name = f"{year}-{month:02d}-{day:02d}"
         destination_path = os.path.join(folder_path, folder_name)
+        print(f"Moving file '{file}' to '{destination_path}'")
 
         try:
             if not os.path.exists(destination_path):
@@ -77,12 +82,14 @@ def sort():
             print(f"File moved from '{file}' to '{destination_path}' successfully.")
         except Exception as e:
             errors.append(f"Error moving file '{file}': {e}")
+            print(f"Error: {e}")
 
     if errors:
         error_message = "\n".join(errors)
         messagebox.showerror("Sort Complete", f"Sorting completed with errors:\n{error_message}")
     else:
         messagebox.showinfo("Sort Complete", "All PNG files have been sorted successfully.")
+
 
 def open_file():
     global folder_path
