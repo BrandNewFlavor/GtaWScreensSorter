@@ -3,16 +3,16 @@ import json
 import glob
 import sys
 import shutil
+import re
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from tkinter import ttk
-import re
 
 CONFIG_FILE_NAME = 'config.json'
 
 def get_config_path():
     if hasattr(sys, '_MEIPASS'):
-        return os.path.join(os.path.dirname(sys.executable), CONFIG_FILE_NAME)
+        return os.path.join(sys._MEIPASS, CONFIG_FILE_NAME)
     else:
         return os.path.join(os.path.dirname(__file__), CONFIG_FILE_NAME)
 
@@ -38,7 +38,6 @@ def save_config(config):
     with open(config_path, 'w', encoding='utf-8') as file:
         json.dump(config, file, indent=4)
     print(f"Config saved: {config}")
-
 
 def sort():
     if folder_path is None:
@@ -72,14 +71,27 @@ def sort():
 
         folder_name = f"{year}-{month:02d}-{day:02d}"
         destination_path = os.path.join(folder_path, folder_name)
-        print(f"Moving file '{file}' to '{destination_path}'")
+        destination_file = os.path.join(destination_path, base_name)
+        print(f"Moving file '{file}' to '{destination_file}'")
 
         try:
             if not os.path.exists(destination_path):
                 os.makedirs(destination_path)
-        
-            shutil.move(file, destination_path)
-            print(f"File moved from '{file}' to '{destination_path}' successfully.")
+
+            # Ensure the destination file doesn't already exist
+            count = 1
+            new_destination_file = destination_file
+            while os.path.exists(new_destination_file):
+                new_destination_file = os.path.join(destination_path, f"{os.path.splitext(base_name)[0]}_{count}.png")
+                count += 1
+
+            shutil.copy2(file, new_destination_file)
+            print(f"File copied from '{file}' to '{new_destination_file}' successfully.")
+
+            # Optionally, remove the original file only if the copy was successful
+            if os.path.exists(new_destination_file):
+                os.remove(file)
+
         except Exception as e:
             errors.append(f"Error moving file '{file}': {e}")
             print(f"Error: {e}")
@@ -89,7 +101,6 @@ def sort():
         messagebox.showerror("Sort Complete", f"Sorting completed with errors:\n{error_message}")
     else:
         messagebox.showinfo("Sort Complete", "All PNG files have been sorted successfully.")
-
 
 def open_file():
     global folder_path
@@ -112,8 +123,7 @@ style.theme_use("clam")
 style.configure("TLabel", foreground="#495057", font=("Helvetica", 10))
 style.configure("TEntry", foreground="#495057", font=("Helvetica", 10))
 style.configure("TButton", background="#007bff", foreground="#ffffff", font=("Helvetica", 10, "bold"), padding=6)
-style.map("TButton",
-          background=[("active", "#0056b3")])
+style.map("TButton", background=[("active", "#0056b3")])
 
 # Main frame to hold all widgets
 main_frame = ttk.Frame(root, padding="20", style="TFrame")
@@ -129,10 +139,9 @@ folderButton.pack()
 fileLabel = ttk.Label(main_frame, text="No folder selected", style="TLabel")
 fileLabel.pack()
 
-# Search Button
+# Sort Button
 sortButton = ttk.Button(main_frame, text="Sort", command=sort, style="TButton")
 sortButton.pack(pady=(10, 0))
-
 
 config = load_config()
 folder_path = config.get("folder_path", None)
@@ -141,5 +150,3 @@ if folder_path:
     print(f"Loaded folder path: {folder_path}")
 
 root.mainloop()
-
-# get_all_screens()
