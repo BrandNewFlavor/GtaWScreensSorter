@@ -5,7 +5,7 @@ a = Analysis(
     ['screensorter.py'],
     pathex=[],
     binaries=[],
-    datas=[('config.json', '.')],
+    datas=[],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
